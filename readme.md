@@ -1,6 +1,6 @@
 # Goal 
 
-Show how to push and use built in prometheus metrics to splunk 
+Show how to push and use built-in Prometheus metrics to Splunk 
 
 # Flows
 
@@ -8,26 +8,26 @@ Show how to push and use built in prometheus metrics to splunk
 
 - Every Kasten component emits metrics 
 - Those metrics are scraped every 5s by Prometheus 
-- Once scraped they can be retreived on the `fedrerate/` prometheus endpoint
-- The Open telemetry collector use `federate/` to collect those metrics and send them to an index metrics in splunk
+- Once scraped, they can be retrieved on the `federate/` Prometheus endpoint
+- The OpenTelemetry collector uses `federate/` to collect those metrics and send them to a metrics index in Splunk
 - Users can now use Splunk to monitor Kasten
 
 # Steps
 
-1. Optional if you don't have Splunk : Build a splunk instance on the same openshift cluter
-2. Create an open telemetry collector (otel-collector) that will collect the prometheus metrics and send them to a metrics index in Splunk
-3. Create Spluk Query Language (spl) request that reproduce prometheus query language (promql) that we usually use for Kasten monitoring 
+1. Optional: if you don't have Splunk, build a Splunk instance on the same OpenShift cluster
+2. Create an OpenTelemetry collector (otel-collector) that will collect the Prometheus metrics and send them to a metrics index in Splunk
+3. Create Splunk Query Language (SPL) requests that reproduce Prometheus Query Language (PromQL) that we usually use for Kasten monitoring 
 
-## Building a splunk instance 
+## Building a Splunk instance 
 
 ```
 oc create -f splunk.yaml 
 ```
 
-It will create a splunk instance in it's own namespace for openshift. During this install we setup a metric index called `k8s_metrics` and we also setup 
-a secret for the splunk UI and for the HEC (HTTP Event Collector) endpoint. 
+It will create a Splunk instance in its own namespace for OpenShift. During this installation, we set up a metrics index called `k8s_metrics` and we also set up 
+a secret for the Splunk UI and for the HEC (HTTP Event Collector) endpoint. 
 
-## Create an open telemetry collector in kasten-io 
+## Create an OpenTelemetry collector in kasten-io 
 
 Create the otel-collector in the kasten-io namespace 
 
@@ -35,14 +35,14 @@ Create the otel-collector in the kasten-io namespace
 oc create -f otel-collector.yaml
 ```
 
-The collector will gather all metrics in the /federate endpoint of the built in prometheus server of Kasten and send them to splunk.
+The collector will gather all metrics from the `/federate` endpoint of the built-in Prometheus server of Kasten and send them to Splunk.
 
-## Porting the prometheus request to Splunk 
+## Porting the Prometheus requests to Splunk 
 
 
 ### Check your metrics 
 
-Check that kasten metrics are now inside the splunk `k8s_metrics` index
+Check that Kasten metrics are now inside the Splunk `k8s_metrics` index
 
 ```
 | mcatalog values(metric_name) as metrics WHERE index=k8s_metrics
@@ -73,11 +73,11 @@ store_operation_seconds_sum
 up
 ```
 
-### Matching the promethus model with the splunk model  
+### Matching the Prometheus model with the Splunk model  
 
 #### Discovering the dimensions 
 
- What in promethus is a `label` 
+What in Prometheus is a `label` 
 ```
 jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="1.0", service="jobs", status="succeeded"}	1464
 jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="2.0", service="jobs", status="succeeded"}	1530
@@ -92,7 +92,7 @@ jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", 
 jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="5.0", service="jobs", status="failed"}  0
 ```
 
-become a `dimension` in splunk
+becomes a `dimension` in Splunk
 
 ```
 | mcatalog values(_dims) WHERE metric_name=jobs_duration_bucket AND index=k8s_metrics
@@ -111,16 +111,16 @@ status
 url.scheme
 ```
 
-However only `le` and `status` are interesting, because they are the only one that change. 
+However, only `le` and `status` are interesting, because they are the only ones that change. 
 
 #### Matching the request 
 
-If you want to get the number of job having a duration under 60s whether they fail or succeed you would write this request in promql
+If you want to get the number of jobs having a duration under 60s whether they fail or succeed, you would write this request in PromQL:
 ```
 jobs_duration_bucket{status=~"(failed|succeeded)", le="60.0"}
 ```
 
-ouput
+output
 ```
 jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="60.0", service="jobs", status="succeeded"}	
 3082
@@ -128,7 +128,7 @@ jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", 
 111
 ```
 
-But to get the same result in spl you have to go with dimension and a span greater than the current period to make sure you get the latest metrics available in this bins
+But to get the same result in SPL, you have to go with dimensions and a span greater than the current period to make sure you get the latest metrics available in these bins:
 ```
 | mstats latest(_value) as num_jobs_under_60s 
 WHERE index=k8s_metrics metric_name="jobs_duration_bucket" 
@@ -143,9 +143,9 @@ _time	    status	    num_jobs_under_60s
 2025-10-16	succeeded	3082
 ```
 
-Notice that I fixed the window time `earliest=-1h latest=now`, hence any change you do in the UI time picker won't have any impact on the result.
+Notice that I fixed the time window `earliest=-1h latest=now`, hence any change you make in the UI time picker won't have any impact on the result.
 
-> **Important Advice**: never use something like `| mstats sum(_value) ....` on an imported prometheus **counter** metrics because you're going to sum the same counter imported x times 
+> **Important Advice**: Never use something like `| mstats sum(_value) ....` on an imported Prometheus **counter** metric because you're going to sum the same counter imported x times 
 > during the bins. The result will just be absurd. 
 >
 > For instance 
@@ -154,30 +154,30 @@ Notice that I fixed the window time `earliest=-1h latest=now`, hence any change 
 > WHERE index=k8s_metrics metric_name="jobs_duration_bucket" le=60 span=24h earliest=-1h latest=now BY status
 > ```
 > 
-> ouput 
+> output 
 > ```
 > _time         status      num_jobs_under_60s
 > 2025-10-16    failed      6513.000000
 > 2025-10-16    succeeded   181716.000000
 > ```
-> which is absurd ... **When counter are imported you need to catch the last counter in the bins**.
+> which is absurd... **When counters are imported, you need to catch the last counter in the bins**.
 
 
-### Important request to build a  splunk dashboard
+### Important requests to build a Splunk dashboard
 
-Unfortunately there is no magic trick to convert a promethus request into a splunk request. Beside, depending of the information you need to extract, map or display you'll build 
+Unfortunately, there is no magic trick to convert a Prometheus request into a Splunk request. Besides, depending on the information you need to extract, map, or display, you'll build 
 your request differently.
 
-This section discuss the building of a useful dashboard to monitor Kasten 
+This section discusses the building of a useful dashboard to monitor Kasten. 
 
-#### Get the successful backup over the last 24h 
+#### Get the successful backups over the last 24h 
 
-With prometheus you would do 
+With Prometheus you would do:
 ```
 increase(catalog_actions_count{liveness="live", status="complete", type="backup"}[24h])>0
 ```
 
-ouput
+output
 ```
 {application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="aidriss-pacman", policy="test-aidriss", service="catalog", status="complete", type="backup"}	
 1.0000846652768125
@@ -299,11 +299,11 @@ oc get backupaction -A | grep Failed | grep 2025-10-16
 oc get backupaction -A | grep Failed | grep 2025-10-15
 ```
 
-That are both returning nothing 
+Both are returning nothing. 
 
-Finally to get a summation it's just adding another pipeline `| stats sum(inc) AS failed_24h`
+Finally, to get a summation, it's just adding another pipeline `| stats sum(inc) AS failed_24h`
 
-Failed
+Failed:
 ```
 | mstats latest(_value) AS cum
   WHERE index=k8s_metrics metric_name=catalog_actions_count status=failed type=backup liveness=live
@@ -317,7 +317,7 @@ Failed
 | stats sum(inc) AS failed_24h
 ```
 
-Complete
+Complete:
 ```
 | mstats latest(_value) AS cum
   WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup liveness=live
@@ -333,10 +333,10 @@ Complete
 
 ### Creating a dashboard 
 
-With the previous request it becomes easy to create a dashboard that let you capture in a quick glance the failed and the successful backup action.
+With the previous requests, it becomes easy to create a dashboard that lets you capture in a quick glance the failed and the successful backup actions.
 
-> **Warning**: this dashboard pnly capture backupaction you may be interested in capturing other actions like runactions, exportactions, retireaction. O
-> Other alerts are worth capturing check a comprehensive list [here](https://github.com/michaelcourcy/kasten-prometheus-stack/blob/main/kasten-rules.yaml). 
-For each of them you'll have to translate the prometheus query to a splunk query. **So please, be aware this dashboard is limited for pedagogic reasons**.
+> **Warning**: This dashboard only captures backupaction; you may be interested in capturing other actions like runactions, exportactions, retireaction. 
+> Other alerts are worth capturing - check a comprehensive list [here](https://github.com/michaelcourcy/kasten-prometheus-stack/blob/main/kasten-rules.yaml). 
+> For each of them, you'll have to translate the Prometheus query to a Splunk query. **So please, be aware this dashboard is limited for pedagogic reasons**.
 
 ![Prometheus dashboard](./dahboard.png)

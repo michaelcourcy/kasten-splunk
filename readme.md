@@ -237,14 +237,13 @@ I can see that it's consistent with the estimated time `2025-10-15 14:17:00` in 
 - the steamstats stream the 2 last rows (separated by 1 minute) inducing another potential 1 minutes un-precision.
 
 
-##### How to explain the increase of cpouthier-pacman counter is 5 but splunk retreive a single inc at 00:02:00
-
-> **Note** : this part becomes highly technical feel free to skip 
+#### How to explain the increase of cpouthier-pacman counter is 5 but splunk retreive a single inc at 00:02:00
 
 When we evaluate 
 
 ```
 increase(catalog_actions_count{liveness="live", status="complete", type="backup", namespace="cpouthier-pacman", policy="cpouthier-pacman-backup"}[24h])>0
+5
 ```
 
 we get 5. However, this is not what we observe when we look at the graph in prometheus 

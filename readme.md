@@ -254,7 +254,7 @@ we get 5. However, this is not what we observe when we look at the graph in prom
 
 ![cpouthier counter graph](./cpouthier-counter-graph.png)
 
-This is because the function `increase` in splunk is for monotonic counter but one successful backup was retired and the counter decrease at around 15:00 from 3 to 2.
+This is because the function `increase` is for monotonic counter but one successful backup was retired and the counter decrease at around 15:00 from 3 to 2.
 Counter are not supposed to decrease and prometheus see it as counter reset, it assumes a reset to 0 (e.g., process restarted).
 
 For a reset, Prometheus adds:
@@ -333,7 +333,7 @@ Complete
 
 ### Creating a dashboard 
 
-Withe the previous request it becomes easy to create a dashboard that let you capture in a quick glance the failed and the successful backup action.
+With the previous request it becomes easy to create a dashboard that let you capture in a quick glance the failed and the successful backup action.
 
 > **Warning**: this dashboard pnly capture backupaction you may be interested in capturing other actions like runactions, exportactions, retireaction. O
 > Other alerts are worth capturing check a comprehensive list [here](https://github.com/michaelcourcy/kasten-prometheus-stack/blob/main/kasten-rules.yaml). 

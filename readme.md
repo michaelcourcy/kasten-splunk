@@ -130,7 +130,10 @@ jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", 
 
 But to get the same result in spl you have to go with dimension and a span greater than the current period to make sure you get the latest metrics available in this bins
 ```
-| mstats latest(_value) as num_jobs_under_60s WHERE index=k8s_metrics metric_name="jobs_duration_bucket" le=60 span=24h earliest=-1h latest=now BY status
+| mstats latest(_value) as num_jobs_under_60s 
+WHERE index=k8s_metrics metric_name="jobs_duration_bucket" 
+le=60 span=24h earliest=-1h latest=now 
+BY status
 ```
 
 output 
@@ -147,7 +150,8 @@ Notice that I fixed the window time `earliest=-1h latest=now`, hence any change 
 >
 > For instance 
 > ```
-> | mstats sum(_value) as num_jobs_under_60s WHERE index=k8s_metrics metric_name="jobs_duration_bucket" le=60 span=24h earliest=-1h latest=now BY status
+> | mstats sum(_value) as num_jobs_under_60s 
+> WHERE index=k8s_metrics metric_name="jobs_duration_bucket" le=60 span=24h earliest=-1h latest=now BY status
 > ```
 > 
 > ouput 

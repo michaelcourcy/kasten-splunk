@@ -29,16 +29,15 @@ a secret for the splunk UI and for the HEC (HTTP Event Collector) endpoint.
 
 ## Create an open telemetry collector in kasten-io 
 
-We use those secrets when creating the otel-collector in the kasten-io namespace 
+Create the otel-collector in the kasten-io namespace 
 
 ```
 oc create -f otel-collector.yaml
 ```
 
-The collector will gather all metrics in the /federate endpoint of the built in prometheus server of Kasten
+The collector will gather all metrics in the /federate endpoint of the built in prometheus server of Kasten and send them to splunk.
 
 ## Porting the prometheus request to Splunk 
-
 
 
 ### Check your metrics 
@@ -123,8 +122,10 @@ jobs_duration_bucket{status=~"(failed|succeeded)", le="60.0"}
 
 ouput
 ```
-jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="60.0", service="jobs", status="succeeded"}	3082
-jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="60.0", service="jobs", status="failed"}	111
+jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="60.0", service="jobs", status="succeeded"}	
+3082
+jobs_duration_bucket{application="k10", instance="jobs-svc.kasten-io.svc:8000", job="httpServiceDiscovery", le="60.0", service="jobs", status="failed"}	
+111
 ```
 
 But to get the same result in spl you have to go with dimension and a span greater than the current period to make sure you get the latest metrics available in this bins

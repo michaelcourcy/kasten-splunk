@@ -1,0 +1,184 @@
+kubectl exec -it deployment/aggregatedapis-svc -- bash
+
+curl -G http://prometheus-server.kasten-io.svc.cluster.local/k10/prometheus/federate   --data-urlencode 'match[]={__name__=~"jobs.*"}' 
+
+curl http://jobs-svc.kasten-io.svc.cluster.local:8000/metrics
+
+
+| mcatalog values(metric_name) as metrics WHERE index=k8s_metrics
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name IN ("jobs_completed","jobs_duration_sum") BY status
+
+| mstats sum(_value) AS total WHERE index=k8s_metrics metric_name=jobs_completed span=5m BY status
+
+| mstats latest(_value) AS up WHERE index=k8s_metrics metric_name=up 
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name="jobs_*" span=5m BY metric_name, le
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name="jobs_duration_bucket" span=24h BY metric_name, le
+| sort 0 le
+
+| mcatalog values(_dims) WHERE metric_name=jobs_duration_bucket AND index=k8s_metrics
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name="catalog_persistent_volume_free_space_percent" 
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name=up earliest=-15m BY job, instance
+
+| mcatalog values(all_dims) WHERE index=k8s_metrics metric_name=up
+
+| mcatalog values(all_dims) WHERE index=k8s_metrics metric_name=jobs_completed
+
+| mstats latest(_value) WHERE index=k8s_metrics metric_name=catalog_actions_count span=1m by status, policy
+
+
+# total complete 
+| mstats sum(_value) as total WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete
+
+| mstats sum(_value) as cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup
+  earliest=-24h span=5m
+| delta cum as inc
+| eval inc=if(inc<0,0,inc)   
+| eval inc=if(inc>1000,0,inc) 
+| stats sum(inc) as increase_24h
+
+| mstats sum(_value) as cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup
+  earliest=-24h latest=now span=5m
+| delta cum as inc
+| eval inc=if(inc<0,0,inc)   
+| eval inc=if(inc>1000,0,inc) 
+| stats sum(inc) as increase_24h
+
+| mstats sum(_value) as cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup
+  earliest=-24h latest=now span=5m
+| delta cum as inc
+| eval inc=if(inc<0,0,inc)   
+| eval inc=if(inc>1000,0,inc) 
+| stats sum(inc) as increase_24h
+
+
+
+
+| mstats sum(_value) as cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup
+  earliest=-1h span=5m
+| delta cum as inc
+| eval inc=if(inc<0,0,inc)   
+| eval inc=if(inc>1000,0,inc) 
+
+
+mstats latest(_value)
+  WHERE index=k8s_metrics metric_name="jobs_duration_bucket"
+  span=5m
+  BY metric_name, le
+mstats → the metrics search command (works only on metrics indexes).
+latest(_value) → for each time bin + dimension group, take the most recent numeric value of the series.
+WHERE index=k8s_metrics → search only that metrics index.
+metric_name="jobs_duration_bucket" → restrict to that one metric (Prometheus-style histogram buckets).
+span=5m → bucket the timeline into 5-minute bins.
+BY metric_name, le → group results by the metric name and the le label (histogram bucket upper bound).
+You’ll get one time series per le (e.g., le="1.0", le="5.0", …, le="+Inf").
+
+mstats latest(_value)
+  WHERE index=k8s_metrics metric_name="jobs_duration_bucket"
+  span=5m
+  BY metric_name, le
+mstats → the metrics search command (works only on metrics indexes).
+latest(_value) → for each time bin + dimension group, take the most recent numeric value of the series.
+WHERE index=k8s_metrics → search only that metrics index.
+metric_name="jobs_duration_bucket" → restrict to that one metric (Prometheus-style histogram buckets).
+span=5m → bucket the timeline into 5-minute bins.
+BY metric_name, le → group results by the metric name and the le label (histogram bucket upper bound).
+You’ll get one time series per le (e.g., le="1.0", le="5.0", …, le="+Inf").
+
+
+=====================================
+This prometheus graph on 1d 
+
+catalog_actions_count{type="backup", status="complete", policy="ola-origin-postgres-ss", liveness="retired"}
+
+Is consistent with this splunk request 
+
+| mstats latest(_value) as num_retired
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup policy=ola-origin-postgres-ss liveness=retired
+  earliest=-24h latest=now span=1h
+
+
+they will show 17 17 18 18 18 18 ....
+
+======================================
+
+Now I want to capture the increase of the number of retired backup in the last 24h for the policy "ola-origin-postgres-ss", in prometheus the request is 
+
+increase(catalog_actions_count{type="backup", status="complete", policy="ola-origin-postgres-ss", liveness="retired"}[24h]) ~ 1.0006949270326615
+
+but in splunk
+
+| mstats latest(_value) as num_retired
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup policy=ola-origin-postgres-ss liveness=retired
+  earliest=-24h latest=now span=1h
+| delta num_retired AS inc
+| stats sum(inc) AS retired_24h
+
+it will simply show 1
+
+======================================
+
+This works because in this specific case the when the policy is "ola-origin-postgres-ss" the namespace is always "ola-postgresql" and we fix the 3 other fields status, type and liveness. 
+
+However if I want all the retired during the last 24h whatever the policy and the namespace, in prometheus the request would be 
+
+sum(increase(catalog_actions_count{type="backup", liveness="retired", status="complete"}[24h])) ~ 11.007644197359276
+
+But the equivalent in splunk is more complex because the model comes from prometheus and not from splunk
+
+| mstats latest(_value) AS cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup liveness=retired
+  earliest=-24h span=1h
+  BY namespace, policy
+| sort 0 _time namespace, policy
+| streamstats current=f last(cum) AS prev BY namespace, policy
+| eval inc = if(isnull(prev), 0, cum - prev)
+| eval inc = if(inc < 0, 0, inc)
+| stats sum(inc) AS retired
+
+it shows exactly 11.
+
+or if you want to see an evolution on the day replace | stats ... by  
+| timechart span=1h sum(inc) AS retired
+
+
+| mstats latest(_value) AS cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup liveness=retired
+  earliest=-24h span=1h
+  BY namespace, policy
+| sort 0 _time namespace, policy
+| streamstats current=f last(cum) AS prev BY namespace, policy
+| eval inc = if(isnull(prev), 0, cum - prev)
+| eval inc = if(inc < 0, 0, inc)
+| where inc > 0
+
+Showing all the backup that happens over the last 24h 
+
+| mstats latest(_value) AS cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup liveness=live
+  earliest=-24h span=5m
+  BY namespace, policy
+| sort 0 _time namespace, policy
+| streamstats current=f last(cum) AS prev BY namespace, policy
+| eval inc = if(isnull(prev), 0, cum - prev)
+| eval inc = if(inc < 0, 0, inc)
+| where inc > 0
+
+
+| mstats latest(_value) AS cum
+  WHERE index=k8s_metrics metric_name=catalog_actions_count status=complete type=backup liveness=live
+  earliest=-24h latest=now span=1h
+  BY namespace, policy
+| sort 0 _time namespace, policy
+| streamstats current=f last(cum) AS prev BY namespace, policy
+| eval inc = if(isnull(prev), 0, cum - prev)
+| eval inc = if(inc < 0, 0, inc)
+| where inc > 0

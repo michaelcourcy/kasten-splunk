@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: kasten-io  
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: otel-collector
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - args:
+        - --config=/conf/otel-config.yaml
+        env:
+        - name: SPLUNK_HEC_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: splunk-hec
+        image: quay.io/signalfx/splunk-otel-collector:latest
+        imagePullPolicy: Always
+        name: otelcol
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: config
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: otel-config.yaml
+            path: otel-config.yaml
+          name: otel-collector-config
+        name: config
+---
+apiVersion: v1
+data:
+  otel-config.yaml: |
+    receivers:
+      # Scrape the built-in Kasten Prometheus via federation (no per-pod scraping)
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'kasten-federate'
+              honor_labels: true
+              metrics_path: /k10/prometheus/federate
+              params:
+                'match[]':
+                  - '{__name__=~".*"}'   # adjust prefixes if needed
+              static_configs:
+                - targets:
+                    - 'prometheus-server.kasten-io.svc.cluster.local'  # <— confirm svc/port
+
+    processors:
+      batch: {}
+      # Optional: prune high-cardinality labels before sending to Splunk
+      # transform:
+      #   metric_statements:
+      #     - context: datapoint
+      #       statements:
+      #         - delete_key(attributes, "pod_uid")
+      #         - delete_key(attributes, "container_id")
+      #         - delete_key(attributes, "image_id")
+
+    exporters:
+      # Send to Splunk Enterprise/Cloud via HEC
+      splunk_hec:
+        token: ${SPLUNK_HEC_TOKEN}
+        endpoint: https://splunk.splunk.svc.cluster.local:8088/services/collector
+        source: kasten
+        sourcetype: metrics
+        index: k8s_metrics
+        # Using the Splunk container's default self-signed cert (fine for lab)
+        tls:
+          insecure_skip_verify: true
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [batch]
+          exporters: [splunk_hec]
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2025-10-14T17:01:48Z"
+  name: otel-collector-config
+  namespace: kasten-io
+  resourceVersion: "886284456"
+  uid: b481ddc5-d01c-4c99-8070-2ea8efbb4a91

@@ -175,16 +175,26 @@ increase(catalog_actions_count{liveness="live", status="complete", type="backup"
 
 ouput
 ```
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="aidriss-pacman", policy="test-aidriss", service="catalog", status="complete", type="backup"}	1.0000846652768125
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="cpouthier-pacman", policy="cpouthier-pacman-backup", service="catalog", status="complete", type="backup"}	5.0034746351633075
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="kasten-io", policy="k10-disaster-recovery-policy", service="catalog", status="complete", type="backup"}	4.002779708130646
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="lchumak-pacman", policy="lchumak-pacman-backup", service="catalog", status="complete", type="backup"}	9.006254343293953
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="minecraft", policy="minecraft-backup", service="catalog", status="complete", type="backup"}	3.0020847810979845
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="mysql", policy="subfreq", service="catalog", status="complete", type="backup"}	2.001389854065323
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="ola-origin-vm", policy="label-test", service="catalog", status="complete", type="backup"}	1.0006949270326615
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="ppiutti-pac-man", policy="ppiutti-pac-man-backup-to-selab", service="catalog", status="complete", type="backup"}	2.001389854065323
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="vidyapan", policy="vidyapan-backup", service="catalog", status="complete", type="backup"}	8.005559416261292
-{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="vm-test", policy="vm-test-backup", service="catalog", status="complete", type="backup"}	2.001389854065323
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="aidriss-pacman", policy="test-aidriss", service="catalog", status="complete", type="backup"}	
+1.0000846652768125
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="cpouthier-pacman", policy="cpouthier-pacman-backup", service="catalog", status="complete", type="backup"}	
+5.0034746351633075
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="kasten-io", policy="k10-disaster-recovery-policy", service="catalog", status="complete", type="backup"}	
+4.002779708130646
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="lchumak-pacman", policy="lchumak-pacman-backup", service="catalog", status="complete", type="backup"}	
+9.006254343293953
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="minecraft", policy="minecraft-backup", service="catalog", status="complete", type="backup"}	
+3.0020847810979845
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="mysql", policy="subfreq", service="catalog", status="complete", type="backup"}	
+2.001389854065323
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="ola-origin-vm", policy="label-test", service="catalog", status="complete", type="backup"}	
+1.0006949270326615
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="ppiutti-pac-man", policy="ppiutti-pac-man-backup-to-selab", service="catalog", status="complete", type="backup"}	
+2.001389854065323
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="vidyapan", policy="vidyapan-backup", service="catalog", status="complete", type="backup"}	
+8.005559416261292
+{application="k10", instance="catalog-svc.kasten-io.svc:8000", job="httpServiceDiscovery", liveness="live", namespace="vm-test", policy="vm-test-backup", service="catalog", status="complete", type="backup"}	
+2.001389854065323
 ```
 
 
